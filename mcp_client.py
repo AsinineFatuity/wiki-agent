@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated, List
 from typing_extensions import TypedDict
 from decouple import config
@@ -78,3 +79,6 @@ async def main():
                     print("AI:", response["messages"][-1].content)
                 except Exception as e:
                     print("Error:", e)
+
+if __name__ == "__main__":
+    asyncio.run(main())
