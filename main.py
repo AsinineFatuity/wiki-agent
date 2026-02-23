@@ -3,6 +3,7 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("WikipediaSearch")
 
+
 @mcp.tool()
 def fetch_wikipedia_info(query: str) -> dict:
     """
@@ -16,11 +17,7 @@ def fetch_wikipedia_info(query: str) -> dict:
         best_match = search_results[0]
         page = wikipedia.page(best_match)
 
-        return {
-            "title": page.title,
-            "summary": page.summary,
-            "url": page.url
-        }
+        return {"title": page.title, "summary": page.summary, "url": page.url}
 
     except wikipedia.DisambiguationError as e:
         return {
@@ -28,9 +25,8 @@ def fetch_wikipedia_info(query: str) -> dict:
         }
 
     except wikipedia.PageError:
-        return {
-            "error": "No Wikipedia page could be loaded for this query."
-        }
+        return {"error": "No Wikipedia page could be loaded for this query."}
+
 
 @mcp.tool()
 def list_wikipedia_sections(topic: str) -> dict:
@@ -43,6 +39,26 @@ def list_wikipedia_sections(topic: str) -> dict:
         return {"sections": sections}
     except Exception as e:
         return {"error": str(e)}
+
+
+@mcp.tool()
+def get_section_content(topic: str, section_title: str) -> dict:
+    """
+    Return the content of a specific section in a Wikipedia article.
+    """
+    try:
+        page = wikipedia.page(topic)
+        content = page.section(section_title)
+        if content:
+            return {"content": content}
+        else:
+            return {
+                "error": f"Section '{section_title}' not found in article '{topic}'."
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # Run the MCP server
 if __name__ == "__main__":
     print("Starting MCP Wikipedia Server...")
