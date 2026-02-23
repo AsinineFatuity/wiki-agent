@@ -728,6 +728,7 @@ dependencies = [
     { name = "mcp" },
     { name = "ruff" },
     { name = "wikipedia" },
+    { name = "wikipedia-sections" },
 ]
 
 [package.metadata]
@@ -735,6 +736,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.26.0" },
     { name = "ruff", specifier = ">=0.15.2" },
     { name = "wikipedia", specifier = ">=1.4.0" },
+    { name = "wikipedia-sections", specifier = ">=2.0.0" },
 ]
 
 [[package]]
@@ -746,3 +748,13 @@ dependencies = [
     { name = "requests" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/67/35/25e68fbc99e672127cc6fbb14b8ec1ba3dfef035bf1e4c90f78f24a80b7d/wikipedia-1.4.0.tar.gz", hash = "sha256:db0fad1829fdd441b1852306e9856398204dc0786d2996dd2e0c8bb8e26133b2", size = 27748, upload-time = "2014-11-15T15:59:49.808Z" }
+
+[[package]]
+name = "wikipedia-sections"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ff/ce/9ec885cef862861bde238ab895f0af4079ff697ed18d7403f2236243beda/wikipedia_sections-2.0.0.tar.gz", hash = "sha256:41bdb56c6f52790e94bd70689f2363b62abb9ee88da8967d65d6a1db0251e103", size = 10529, upload-time = "2020-09-05T10:57:17.947Z" }
