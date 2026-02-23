@@ -13,8 +13,6 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from mcp.client.stdio import stdio_client
 
 server_params = StdioServerParameters(command="uv run mcp_server.py")
-client = ClientSession(server_params)
-
 
 # Langgraph state definition
 class LangGraphState(TypedDict):
