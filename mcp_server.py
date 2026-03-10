@@ -59,6 +59,20 @@ def get_section_content(topic: str, section_title: str) -> dict:
         return {"error": str(e)}
 
 
+@mcp.prompt()
+def highlight_sections_prompt(topic: str) -> str:
+    """
+    Identifies the most important sections from a Wikipedia article on the given topic
+    """
+    return f"""
+    The user is exploring the Wikipedia article on "{topic}"
+
+    Given the list of section title from  the article, choose the 3-5 most important or interesting sections that are likely to help someone learn about the topic.
+
+    Return a bullet list of these section title, along with 1-line explanations of why each one matters
+    """
+
+
 # Run the MCP server
 if __name__ == "__main__":
     print("Starting MCP Wikipedia Server...")
