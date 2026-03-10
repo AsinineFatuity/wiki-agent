@@ -57,6 +57,7 @@ async def create_graph(session):
     graph.add_edge("tool_node", "chat_node")
     return graph.compile(checkpointer=MemorySaver())
 
+
 async def list_prompts(session):
     prompt_response = await session.list_prompts()
 
@@ -72,12 +73,13 @@ async def list_prompts(session):
                 print(f"  - {arg.name}")
         else:
             print("  - No arguments required.")
-    print("\nUse: /prompt <prompt_name> \"arg1\" \"arg2\" ...")
+    print('\nUse: /prompt <prompt_name> "arg1" "arg2" ...')
+
 
 async def handle_prompt(session, tools, command, agent):
     parts = shlex.split(command.strip())
     if len(parts) < 2:
-        print("Usage: /prompt <name> \"args>\"")
+        print('Usage: /prompt <name> "args>"')
         return
 
     prompt_name = parts[1]
@@ -101,17 +103,19 @@ async def handle_prompt(session, tools, command, agent):
         arg_values = {arg.name: val for arg, val in zip(match.arguments, args)}
         response = await session.get_prompt(prompt_name, arg_values)
         prompt_text = response.messages[0].content.text
-        
+
         # Execute the prompt via the agent
         agent_response = await agent.ainvoke(
             {"messages": [HumanMessage(content=prompt_text)]},
-            config={"configurable": {"thread_id": "wiki-session"}}
+            config={"configurable": {"thread_id": "wiki-session"}},
         )
         print("\n=== Prompt Result ===")
         print(agent_response["messages"][-1].content)
 
     except Exception:
         logging.error(f"{__name__}: Prompt invocation failed:", exc_info=True)
+
+
 async def main():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
