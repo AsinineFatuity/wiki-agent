@@ -120,14 +120,24 @@ async def main():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-
+            tools = await load_mcp_tools(session)
             agent = await create_graph(session)
+
             print("Wikipedia MCP agent is ready.")
+            print("Type a question or use the following templates:")
+            print("  /prompts                - to list available prompts")
+            print('  /prompt <name> "args"   - to run a specific prompt')
 
             while True:
                 user_input = input("\nYou: ").strip()
                 if user_input.lower() in {"exit", "quit", "q"}:
                     break
+                elif user_input.startswith("/prompts"):
+                    await list_prompts(session)
+                    continue
+                elif user_input.startswith("/prompt"):
+                    await handle_prompt(session, tools, user_input, agent)
+                    continue
 
                 try:
                     response = await agent.ainvoke(
@@ -136,7 +146,7 @@ async def main():
                     )
                     print("AI:", response["messages"][-1].content)
                 except Exception:
-                    logging.error(f"{__name__}:Error:", exc_info=True)
+                    logging.error(f"{__name__}: Error:", exc_info=True)
 
 
 if __name__ == "__main__":
