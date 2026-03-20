@@ -3,6 +3,7 @@ import requests
 from mcp.server.fastmcp import FastMCP
 from datetime import datetime
 from pathlib import Path
+
 mcp = FastMCP("WikipediaSearch")
 
 # MediaWiki 1.46+: parse&prop=sections with `titles=` often returns [].
@@ -97,6 +98,8 @@ def highlight_sections_prompt(topic: str) -> str:
 
     Return a bullet list of these section title, along with 1-line explanations of why each one matters
     """
+
+
 @mcp.resource("file://suggested_titles")
 def suggested_titles() -> list[str]:
     """
@@ -113,5 +116,7 @@ def suggested_titles() -> list[str]:
 
 # Run the MCP server
 if __name__ == "__main__":
-    print(f"{__name__}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Starting MCP Wikipedia Server...")
+    print(
+        f"{__name__}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Starting MCP Wikipedia Server..."
+    )
     mcp.run(transport="stdio")
