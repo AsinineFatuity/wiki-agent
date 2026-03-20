@@ -31,7 +31,9 @@ def agent_invoke_config(thread_id: str = "wiki-session") -> dict:
     }
 
 
-def repair_openai_tool_messages(messages: List[AnyMessage]) -> tuple[List[AnyMessage], bool]:
+def repair_openai_tool_messages(
+    messages: List[AnyMessage],
+) -> tuple[List[AnyMessage], bool]:
     """
     OpenAI rejects history if an assistant message has tool_calls but not every id has
     a following ToolMessage (e.g. GraphRecursionError aborts before tool_node runs).
