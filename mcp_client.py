@@ -115,6 +115,18 @@ async def handle_prompt(session, tools, command, agent):
     except Exception:
         logging.error(f"{__name__}: Prompt invocation failed:", exc_info=True)
 
+async def list_resources(session):
+    try:
+        response = await session.list_resources()
+        if not response or not response.resources:
+            print("No resources found on the server.")
+            return
+        print("\nAvailable Resources:")
+        for i, resource in enumerate(response.resources, start=1):
+            print(f"{i}. {resource.name}")
+        print('\nUse: /resource <name> to view its content')
+    except Exception:
+        logging.error(f"{__name__}: Resource listing failed:", exc_info=True)
 
 async def main():
     async with stdio_client(server_params) as (read, write):
