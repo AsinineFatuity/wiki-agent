@@ -8,7 +8,8 @@ from mcp import ClientSession, StdioServerParameters
 from langgraph.graph.message import AnyMessage, add_messages
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, RemoveMessage
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
@@ -28,6 +29,51 @@ def agent_invoke_config(thread_id: str = "wiki-session") -> dict:
         "recursion_limit": GRAPH_RECURSION_LIMIT,
         "configurable": {"thread_id": thread_id},
     }
+
+
+def repair_openai_tool_messages(messages: List[AnyMessage]) -> tuple[List[AnyMessage], bool]:
+    """
+    OpenAI rejects history if an assistant message has tool_calls but not every id has
+    a following ToolMessage (e.g. GraphRecursionError aborts before tool_node runs).
+    Insert synthetic ToolMessages for any missing ids so the next completion call works.
+    """
+    out: List[AnyMessage] = []
+    pending: List[str] = []
+    changed = False
+
+    def flush() -> None:
+        nonlocal changed, pending, out
+        if not pending:
+            return
+        for tid in pending:
+            out.append(
+                ToolMessage(
+                    content=(
+                        "[Aborted] This tool call did not finish (e.g. step/recursion limit). "
+                        "Do not assume tool output; use prior messages or call tools again if needed."
+                    ),
+                    tool_call_id=tid,
+                )
+            )
+        changed = True
+        pending = []
+
+    for msg in messages:
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            flush()
+            out.append(msg)
+            pending = [str(tc["id"]) for tc in msg.tool_calls if tc.get("id")]
+        elif isinstance(msg, ToolMessage):
+            out.append(msg)
+            tid = msg.tool_call_id
+            if tid in pending:
+                pending = [x for x in pending if x != tid]
+        else:
+            flush()
+            out.append(msg)
+
+    flush()
+    return out, changed
 
 
 # Langgraph state definition
@@ -57,9 +103,19 @@ async def create_graph(session):
     )
     chat_llm = prompt_template | llm_with_tools
 
-    def chat_node(state: LangGraphState) -> LangGraphState:
-        state["messages"] = chat_llm.invoke({"messages": state["messages"]})
-        return state
+    def chat_node(state: LangGraphState) -> dict:
+        msgs, did_repair = repair_openai_tool_messages(state["messages"])
+        ai_msg = chat_llm.invoke({"messages": msgs})
+        if did_repair:
+            # add_messages is append-only; mid-history inserts require full replace.
+            return {
+                "messages": [
+                    RemoveMessage(id=REMOVE_ALL_MESSAGES),
+                    *msgs,
+                    ai_msg,
+                ]
+            }
+        return {"messages": ai_msg}
 
     # Build Langraph with tool routing
     graph = StateGraph(LangGraphState)
