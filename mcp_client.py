@@ -13,9 +13,21 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.errors import GraphRecursionError
 from mcp.client.stdio import stdio_client
 
 server_params = StdioServerParameters(command="uv", args=["run", "mcp_server.py"])
+
+# One graph "step" ≈ one node (chat or tools). chat→tools→chat is ~3 steps.
+# Hard cap so a bad tool loop can't spin forever (shows as many CallToolRequest lines).
+GRAPH_RECURSION_LIMIT = int(config("GRAPH_RECURSION_LIMIT", default=25))
+
+
+def agent_invoke_config(thread_id: str = "wiki-session") -> dict:
+    return {
+        "recursion_limit": GRAPH_RECURSION_LIMIT,
+        "configurable": {"thread_id": thread_id},
+    }
 
 
 # Langgraph state definition
@@ -35,7 +47,10 @@ async def create_graph(session):
         [
             (
                 "system",
-                "You are a helpful assistant that uses tools to search Wikipedia",
+                "You are a helpful assistant that uses tools to search Wikipedia. "
+                "Use tools efficiently: prefer a small number of calls, reuse prior tool "
+                "results in the same turn, and stop calling tools once you can answer. "
+                "Do not repeatedly call the same tool with the same arguments.",
             ),
             MessagesPlaceholder(variable_name="messages"),
         ]
@@ -107,11 +122,16 @@ async def handle_prompt(session, tools, command, agent):
         # Execute the prompt via the agent
         agent_response = await agent.ainvoke(
             {"messages": [HumanMessage(content=prompt_text)]},
-            config={"configurable": {"thread_id": "wiki-session"}},
+            config=agent_invoke_config(),
         )
         print("\n=== Prompt Result ===")
         print(agent_response["messages"][-1].content)
 
+    except GraphRecursionError:
+        print(
+            "Stopped: agent hit the step limit "
+            f"(GRAPH_RECURSION_LIMIT={GRAPH_RECURSION_LIMIT})."
+        )
     except Exception:
         logging.error(f"{__name__}: Prompt invocation failed:", exc_info=True)
 
@@ -193,9 +213,15 @@ async def main():
                 try:
                     response = await agent.ainvoke(
                         {"messages": user_input},
-                        config={"configurable": {"thread_id": "wiki-session"}},
+                        config=agent_invoke_config(),
                     )
                     print("AI:", response["messages"][-1].content)
+                except GraphRecursionError:
+                    print(
+                        "Stopped: agent hit the step limit "
+                        f"(GRAPH_RECURSION_LIMIT={GRAPH_RECURSION_LIMIT}). "
+                        "Raise the limit in .env or fix the prompt / tool loop."
+                    )
                 except Exception:
                     logging.error(f"{__name__}: Error:", exc_info=True)
 
