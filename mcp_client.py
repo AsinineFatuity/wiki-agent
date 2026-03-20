@@ -128,6 +128,35 @@ async def list_resources(session):
     except Exception:
         logging.error(f"{__name__}: Resource listing failed:", exc_info=True)
 
+async def handle_resource(session, command):
+    parts = shlex.split(command.strip())
+    if len(parts) < 2:
+        print('Usage: /resource <name>')
+        return
+    resource_id = parts[1]
+
+    try:
+        response = await session.list_resources()
+        resources = response.resources
+        resource_map = {str(i+1): r.name for i, r in enumerate(resources)}
+
+        #resolve resource name or index
+        resource_name = resource_map.get(resource_id, resource_id)
+        match = next((r for r in resources if r.name == resource_name), None)
+        if not match:
+            print(f"Resource '{resource_id}' not found.")
+            return
+
+        #get resource content
+        result = await session.read_resource(match.id)
+        for content in result.contents:
+            if hasattr(content, "text"):
+                print("\n===Resource Text===")
+                print(content.text)
+        
+    except Exception:
+        logging.error(f"{__name__}: Resource handling failed:", exc_info=True)
+
 async def main():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
