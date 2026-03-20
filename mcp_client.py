@@ -148,9 +148,8 @@ async def handle_resource(session, command):
         if not match:
             print(f"Resource '{resource_id}' not found.")
             return
-
         # get resource content
-        result = await session.read_resource(match.id)
+        result = await session.read_resource(match.uri)
         for content in result.contents:
             if hasattr(content, "text"):
                 print("\n===Resource Text===")
