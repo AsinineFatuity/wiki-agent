@@ -1,7 +1,33 @@
 import wikipedia
+import requests
 from mcp.server.fastmcp import FastMCP
+from datetime import datetime
 
 mcp = FastMCP("WikipediaSearch")
+
+# MediaWiki 1.46+: parse&prop=sections with `titles=` often returns [].
+# Using `page=` (resolved article title) returns the real TOC.
+WIKI_API = "https://en.wikipedia.org/w/api.php"
+WIKI_UA = "wiki-agent-mcp/1.0 (https://github.com/wiki-agent; MCP Wikipedia tools)"
+
+
+def _section_titles_for_page(resolved_title: str) -> list[str]:
+    r = requests.get(
+        WIKI_API,
+        params={
+            "action": "parse",
+            "page": resolved_title,
+            "prop": "sections",
+            "format": "json",
+        },
+        headers={"User-Agent": WIKI_UA},
+        timeout=30,
+    )
+    r.raise_for_status()
+    data = r.json()
+    if "error" in data:
+        raise RuntimeError(data["error"].get("info", str(data["error"])))
+    return [s["line"] for s in data["parse"]["sections"]]
 
 
 @mcp.tool()
@@ -35,7 +61,7 @@ def list_wikipedia_sections(topic: str) -> dict:
     """
     try:
         page = wikipedia.page(topic)
-        sections = page.sections
+        sections = _section_titles_for_page(page.title)
         return {"sections": sections}
     except Exception as e:
         return {"error": str(e)}
@@ -75,5 +101,5 @@ def highlight_sections_prompt(topic: str) -> str:
 
 # Run the MCP server
 if __name__ == "__main__":
-    print("Starting MCP Wikipedia Server...")
+    print(f"{__name__}: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} Starting MCP Wikipedia Server...")
     mcp.run(transport="stdio")
